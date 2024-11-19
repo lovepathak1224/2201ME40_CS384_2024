@@ -1,196 +1,110 @@
+# Import required modules
 import subprocess
-import sys
-
-# Install pandas and openpyxl
+import os
+import runpy
+import mplfinance
+# Install mplfinance (if not already installed)
 try:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas", "openpyxl"])
-    print("pandas and openpyxl installed successfully!")
+    import mplfinance
+except ImportError:
+    print("Installing mplfinance...")
+    subprocess.check_call([os.sys.executable, "-m", "pip", "install", "mplfinance"])
+
+# Define the notebook file and its converted script counterpart
+notebook_file = "stock_analysis.ipynb"
+script_file = "stock_analysis.py"
+
+# Convert the .ipynb file to a .py file if needed
+if not os.path.exists(script_file):
+    try:
+        print(f"Converting {notebook_file} to {script_file}...")
+        subprocess.check_call(["jupyter", "nbconvert", "--to", "script", notebook_file])
+    except Exception as e:
+        print(f"Error converting notebook: {e}")
+        exit(1)
+
+# Simulate %run stock_analysis.ipynb by running the converted .py file
+try:
+    print(f"Running {script_file}...")
+    runpy.run_path(script_file, run_name="_main_")
 except Exception as e:
-    print(f"An error occurred: {e}")
+    print(f"Error running script: {e}")
 
 
+with open('stock_analysis.ipynb', 'r') as file:
+    print(file.read())
+
+# %run stock_analysis.ipynb
 
 import pandas as pd
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill
+import mplfinance as mpl
+import numpy as np
+import matplotlib.pyplot as plt
 
+# Load and Inspect the Data:
+# Load the dataset using pandas
+df = pd.read_csv("infy_stock.csv")
+# Display the first 10 rows of the dataset.
+df.head(10)
 
-# Step 4: Read the student list
-file_path = 'stud_list.txt'
-with open(file_path, 'r') as file:
-    student_list = file.readlines()
+# Check if there are any missing values and handle them appropriately.
+df.isnull().sum()
 
-# Step 5: Parse the student list into a DataFrame
-students_data = []
-for student in student_list:
-    parts = student.strip().split()
-    roll = parts[0]
-    name = " ".join(parts[1:])
-    students_data.append([roll, name])
+df.ffill(inplace=True)
+df["Date"] = pd.to_datetime(df["Date"])
+df.set_index("Date", inplace=True)
 
-# Step 6: Create a DataFrame from the student list
-student_df = pd.DataFrame(students_data, columns=['Roll', 'Name'])
+# Data Visualization
+# Plot the closing price over time.
+df["Close"].plot()
 
-# Step 7: Read the dates file (classes taken, missed, and exam dates)
-classes_taken_dates = ["06/08/2024", "13/08/2024",
-                       "20/08/2024", "27/08/2024",
-                       "03/09/2024", "17/09/2024",
-                       "01/10/2024"]
-classes_missed_dates = ["10/09/2024"]
-exams_dates = ["24/09/2024"]
+df.index
+df.shape
 
-# Step 8: Read the attendance CSV
-path = 'input_attendance01.csv'
-attendance_df = pd.read_csv(path)
+# Plot a candlestick chart for the stock prices (using mplfinance or another library of your choice)
+mpl.plot(df.loc["2020-Jan-01":"2020-Jun-01", ['Open', 'High', 'Low', 'Close']], type='candle', volume=False, style='charles')
 
-# Display loaded data
-print(student_df.head())
-print(attendance_df.head())
+# Calculate the daily return percentage.
+df["Return %age"] = ((df["Close"] - df["Open"])/df["Open"]) * 100
 
-attendance_df['Timestamp'] = pd.to_datetime(attendance_df['Timestamp'], dayfirst=True)
-attendance_df['Date'] = attendance_df['Timestamp'].dt.date
+df[df["Return %age"] > 10]
 
+# Calculate the average and median of daily returns.
+# Calculate the standard deviation of the closing prices.
+avg = df["Return %age"].sum()/df.shape[0]
+mid = int((df.shape[0] + 1)/2)
+median = df["Return %age"].sort_values().iloc[mid]
+sd = (((df["Close"] - avg) * 2).sum()/df.shape[0]) * 0.5
+print("Average return : ", avg)
+print("Median return : ", median)
+print("Standard Deviation of closing price : ", sd)
 
-def get_attendance_status(attendance_timestamps, class_dates):
-    attendance_record = {}
-    for date in class_dates:
-        # Ensure date parsing is consistent
-        class_date = pd.to_datetime(date, dayfirst=True).date()
+# Calculate the 50-day and 200-day moving averages of the stock's closing price and plot them.
+df["50-day MA"] = df["Close"].rolling(window=50).mean()
+df["200-day MA"] = df["Close"].rolling(window=200).mean()
 
-        # Filter attendance for the specific date
-        attendance_on_date = attendance_timestamps[attendance_timestamps['Date'] == class_date]
+df["50-day MA"].plot()
+plt.xlabel('Date')
+plt.ylabel('Moving Average')
 
-        if len(attendance_on_date) == 0:
-            # Mark as absent
-            attendance_record[date] = 0
-        elif len(attendance_on_date) == 1:
-            # Mark as partial attendance
-            attendance_record[date] = 1
-        else:
-            # Mark as full attendance
-            attendance_record[date] = 2
-    return attendance_record
+df["200-day MA"].plot()
+plt.xlabel('Date')
+plt.ylabel('Moving Average')
 
-# Step 11: Apply this function to all students
-attendance_summary = {}
-for roll in student_df['Roll']:
-    # Drop NaN values from 'Roll' column before filtering
-    valid_attendance_df = attendance_df.dropna(subset=['Roll'])
+# Volatility Analysis
+# Plot the volatility of the stock using the rolling standard deviation (30-day window),
+df["30-day sd"] = df["Close"].rolling(window=30).std(ddof=0)
+df["30-day sd"].plot()
+plt.xlabel('Date')
+plt.ylabel('Standard Deviation')
 
-    # Extract only the roll number from attendance DataFrame
-    student_attendance = valid_attendance_df[valid_attendance_df['Roll'].str.startswith(roll)]
+# Trend Analysis
+# Identify and mark the bullish and bearish trends based on moving averages (50-day vs 200-day)
+df['Bullish'] = (df['50-day MA'] > df['200-day MA']) & (df['50-day MA'].shift(1) <= df['200-day MA'].shift(1))
+bullish_points = df[df['Bullish']]
+print(bullish_points[['Close', '50-day MA', '200-day MA']])
 
-    attendance_summary[roll] = get_attendance_status(student_attendance, classes_taken_dates)
+df[["50-day MA", "200-day MA"]].plot()
 
-    # Debugging: Check the matched attendance records for the student
-    print(f"Matched attendance records for {roll}:")
-    print(student_attendance)
-
-
-
-# Step 12: Convert attendance summary to a DataFrame
-attendance_summary_df = pd.DataFrame.from_dict(attendance_summary, orient='index', columns=classes_taken_dates)
-
-# Add the student names to the attendance summary DataFrame
-attendance_summary_df['Roll'] = attendance_summary_df.index
-attendance_summary_df = attendance_summary_df.merge(student_df, on='Roll', how='left')
-
-# Reorder columns to have Roll, Name, and attendance dates
-attendance_summary_df = attendance_summary_df[['Roll', 'Name'] + classes_taken_dates]
-# Step 13: Display the attendance summary
-print(attendance_summary_df.head())
-
-# Step 12: Create an Excel file
-output_excel_path = 'output_excel.xlsx'
-with pd.ExcelWriter(output_excel_path, engine='openpyxl') as writer:
-    attendance_summary_df.to_excel(writer, sheet_name='Attendance',index = False)
-    workbook = writer.book
-    worksheet = writer.sheets['Attendance']
-
-    # Step 13: Apply color coding based on attendance status
-    fill_red = PatternFill(start_color='FF0000', end_color='FF0000', fill_type='solid')  # Red for absent (0)
-    fill_yellow = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')  # Yellow for partial (1)
-    fill_green = PatternFill(start_color='00FF00', end_color='00FF00', fill_type='solid')  # Green for full (2)
-
-    for row in range(2, len(attendance_summary_df) + 2):
-        for col in range(3, len(classes_taken_dates) + 3):
-            cell = worksheet.cell(row=row, column=col)
-            attendance_value = cell.value
-            if attendance_value == 0:
-                cell.fill = fill_red
-            elif attendance_value == 1:
-                cell.fill = fill_yellow
-            elif attendance_value == 2:
-                cell.fill = fill_green
-
-# Step 14: Save the Excel file
-print(f"Attendance Excel saved at: {output_excel_path}")
-
-# Step 15: Adding new columns
-# Initialize empty lists for new columns
-total_count_of_dates = []
-total_attendance_marked = []
-total_attendance_allowed = len(classes_taken_dates) * 2  # Max two attendances per class
-proxy_count = []
-proxy_dates = []
-
-attendance_df['Roll'] = attendance_df['Roll'].fillna('')
-# Loop through each student to calculate the new columns
-for roll in attendance_summary_df['Roll']:
-    student_attendance = attendance_summary_df[attendance_summary_df['Roll'] == roll]
-
-    # 1. Total count of dates
-    total_count = student_attendance[classes_taken_dates].sum(axis=1).values[0]
-    total_count_of_dates.append(total_count)
-
-    # 2. Total attendance marked
-    roll_attendance = attendance_df[attendance_df['Roll'].str.startswith(roll)]
-    total_marked = len(roll_attendance)  # Count of all marked attendances (including non-teaching days)
-    total_attendance_marked.append(total_marked)
-
-    # 3. Proxy calculation
-    proxies = total_marked - total_attendance_allowed
-    proxy_count.append(proxies if proxies > 0 else 0)  # If proxy exists, otherwise 0
-
-  # 4. Dates of proxies
-if proxies > 0:
-    # Ensure the dates are strings before joining them
-    proxy_dates_list = roll_attendance[~roll_attendance['Date'].isin(classes_taken_dates)]['Date'].astype(str).tolist()
-    proxy_dates.append(", ".join(proxy_dates_list))
-else:
-    proxy_dates.append("None")
-
-
-# Adding new columns to the DataFrame
-attendance_summary_df['Total count of dates'] = total_count_of_dates
-attendance_summary_df['Total Attendance Marked'] = total_attendance_marked
-attendance_summary_df['Total Attendance Allowed'] = total_attendance_allowed
-attendance_summary_df['Proxy'] = proxy_count
-# attendance_summary_df['Proxy Dates'] = proxy_dates
-
-# Step 16: Save the updated Excel file with the new columns
-output_excel_path = 'output_excel_with_proxies.xlsx'
-with pd.ExcelWriter(output_excel_path, engine='openpyxl') as writer:
-    attendance_summary_df.to_excel(writer, sheet_name='Attendance', index=False)  # Save without index
-    workbook = writer.book
-    worksheet = writer.sheets['Attendance']
-
-    # Re-apply the color coding for attendance status
-    fill_red = PatternFill(start_color='FF0000', end_color='FF0000', fill_type='solid')  # Red for absent (0)
-    fill_yellow = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')  # Yellow for partial (1)
-    fill_green = PatternFill(start_color='00FF00', end_color='00FF00', fill_type='solid')  # Green for full (2)
-
-    # Start coloring from the 3rd column (attendance data)
-    for row in range(2, len(attendance_summary_df) + 2):
-        for col in range(3, len(classes_taken_dates) + 3):
-            cell = worksheet.cell(row=row, column=col)
-            attendance_value = cell.value
-            if attendance_value == 0:
-                cell.fill = fill_red
-            elif attendance_value == 1:
-                cell.fill = fill_yellow
-            elif attendance_value == 2:
-                cell.fill = fill_green
-
-# Step 17: Final output
-print(f"Attendance Excel with proxies saved at: {output_excel_path}")
+plt.plot(df.index, df['50-day MA'], label='50-day MA', color='blue')
+plt.scatter(bullish_points.index, bullish_points['50-day MA'], marker='^', color='green', label='Bullish Crossover', s=50)
