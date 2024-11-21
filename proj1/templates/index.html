@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seating Arrangement</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #bfe8ea, #699bea);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            width: 90%;
+            max-width: 1200px;
+        }
+        .form-container {
+            background: linear-gradient(to right, #f8f5f5, #f2f2f2);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        input[type="file"], input[type="number"], input[type="text"], select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 10px 0;
+            
+           
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        input[type="submit"], button[type="submit"] {
+            background-color: #1a46b4;
+            color: #fff;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        input[type="submit"]:hover, button[type="submit"]:hover {
+            background-color: #218838;
+        }
+        
+        label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <h2>Generate Seating Arrangement</h2>
+            <form action="/submit" method="post" enctype="multipart/form-data">
+                <label for="students_file">Upload Students File:</label>
+                <input type="file" id="students_file" name="students_file" accept=".csv" required>
+
+                <label for="schedule_file">Upload Schedule File:</label>
+                <input type="file" id="schedule_file" name="schedule_file" accept=".csv" required>
+
+                <label for="rooms_file">Upload Rooms File:</label>
+                <input type="file" id="rooms_file" name="rooms_file" accept=".csv" required>
+
+                <label for="buffer">Buffer Size (e.g., 5):</label>
+                <input type="number" id="buffer" name="buffer" min="0" value="5" required>
+
+                <label for="seating">Seating Option:</label>
+                <select id="seating" name="seating">
+                    <option value="dense">Dense</option>
+                    <option value="sparse">Sparse</option>
+                </select>
+
+                <input type="submit" value="Generate Seating Arrangement">
+            </form>
+        </div>
+
+        <div class="form-container">
+            <h2>Generate Attendance</h2>
+            <form action="/generate_attendance" method="post" enctype="multipart/form-data">
+                <label for="date">Date (DD/MM/YYYY):</label>
+                <input  type="text" id="date" name="date" required>
+
+                <label for="room_no">Room Number:</label>
+                <select id="room_no" name="room_no">
+                    <option value="101">101</option>
+                <option value="102">102</option>
+                <option value="103">103</option>
+                <option value="104">104</option>
+                <option value="105">105</option>
+                <option value="106">106</option>
+                <option value="107">107</option>
+                <option value="108">108</option>
+                <option value="109">109</option>
+                <option value="110">110</option>
+                <option value="301">301</option>
+                <option value="302">302</option>
+                <option value="303">303</option>
+                <option value="304">304</option>
+                <option value="305">305</option>
+                <option value="306">306</option>
+                <option value="307">307</option>
+                <option value="308">308</option>
+                <option value="309">309</option>
+                <option value="310">310</option>
+                <option value="409">409</option>
+                <option value="410">410</option>
+                <option value="502">502</option>
+                <option value="LT001">LT001</option>
+                <option value="LT101">LT101</option>
+                <option value="LT002">LT002</option>
+                <option value="LT003">LT003</option>
+                <option value="LT103">LT103</option>
+                </select>
+                <label for="Shift">Shift:</label>
+                <select id="Shift" name="Shift">
+                    <option value="Morning">Morning</option>
+                    <option value="Evening">Evening</option>
+                </select>
+                <label for="students_file">Upload Name Roll No. File:</label>
+                <input type="file" id="student_file" name="student_file" accept=".csv" required>
+                <label for="seating_file">Seating Arrangement File:</label>
+                <input type="file" id="seating_file" name="seating_file" accept=".csv" required>
+
+                <button type="submit">Generate Attendance</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
